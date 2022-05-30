@@ -1,0 +1,48 @@
+#include <amxmodx>
+
+public oo_init()
+{
+    new Class:_c_PlayerClass = oo_class("PlayerClass")
+    {
+        oo_var(_c_PlayerClass, DT_CELL, "m_cell");
+        oo_var(_c_PlayerClass, DT_CELL, "m_float");
+        oo_var(_c_PlayerClass, DT_ARRAY[32], "m_array");
+(Object:i, const Float:f, const char s[], Float:array[], array[32])
+        {
+            if (1)
+            {
+            }
+        }
+()
+        {
+            if (1)
+            {
+            }
+        }
+()
+        {
+        }
+    }
+
+    new Class:_c_Human = oo_class("Human", "PlayerClass")
+    {
+        oo_var(_c_Human, DT_CELL, "m_pPlayer");
+        oo_var(_c_Human, DT_CELL, "m_dynarray");
+        oo_var(_c_Human, DT_ARRAY[32], "m_name");
+(Object:i, const Float:f, const char s[], Float:array[], array[32])
+        {
+            if (1)
+            {
+            }
+        }
+()
+        {
+            if (1)
+            {
+            }
+        }
+()
+        {
+        }
+    }
+}
