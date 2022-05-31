@@ -24,7 +24,7 @@
     <ProjectGuid>{99565702-85c7-4734-af8b-871c1eca0f50}</ProjectGuid>
     <RootNamespace>OORegex</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>OOPawnConverter</ProjectName>
+    <ProjectName>OOPawn</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

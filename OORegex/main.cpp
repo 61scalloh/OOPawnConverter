@@ -97,8 +97,6 @@ int main(int argc, char* argv[])
         size_t brace_start, brace_length;
         if (GetNestedString(str.c_str(), '{', '}', m.position() + m.length() + 1, &brace_start, &brace_length))
         {
-
-            std::cout << "haha" << std::endl;
             bstr += str.substr(last_pos, brace_start - last_pos);
 
             size_t last_pos2 = 0;
@@ -173,14 +171,13 @@ int main(int argc, char* argv[])
                     // check if this method has declaration
                     if (GetNestedString(class_str.c_str(), '{', '}', param_start + param_length + 1, &mstart, &mlen))
                     {
-                        std::string method_str = std::format("\n{}public {}{}@{}", mm[1].str(), mm[4].matched ? mm[4].str() + ":" : "", class_name, method_name);
+                        std::string method_str = std::format("\npublic {}{}@{}", mm[4].matched ? mm[4].str() + ":" : "", class_name, method_name);
                         param_str = std::regex_replace(param_str, char_r, "$1$3");
-                        method_str += param_str + mm[1].str();
+                        method_str += param_str + "\n";
                         method_str += class_str.substr(mstart, mlen);
 
-                        std::string s = mm[1].str().substr(2);
-                        method_str = std::regex_replace(method_str, std::regex("^" + s), "");
-                        std::cout << "[" << s << "]" << std::endl;
+                        std::string s = std::regex_replace(mm[1].str(), std::regex("[\\n\\r]"), "");
+                        method_str = std::regex_replace(method_str, std::regex("^" + s), "") + "\n";
                         method_list.push_back(method_str); // add to the method list for later use
                     }
                     else
@@ -211,4 +208,7 @@ int main(int argc, char* argv[])
 
     std::ofstream ofile(source + ".sma", std::ios::binary | std::ios::trunc);
     ofile << bstr;
+
+    std::cout << "File \'" << source  << "\" has been converted successfully" << std::endl;
+    std::cout << "File Output: " << source + ".sma" << std::endl;
 }
