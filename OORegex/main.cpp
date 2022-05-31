@@ -24,11 +24,20 @@ bool GetNestedString(const char* str, const char open='{', const char close='}',
         {
             count--;
 
+            if (count < 0)
+            {
+                return false;
+            }
+
             if (count == 0)
             {
                 *length = i - *start_pos + 1;
                 return true;
             }
+        }
+        else if (count == 0 && str[i] != ' ' && str[i] != '\n' && str[i] != '\t')
+        {
+            return false;
         }
     }
 
@@ -37,22 +46,7 @@ bool GetNestedString(const char* str, const char open='{', const char close='}',
 
 int main(int argc, char* argv[])
 {
-    std::vector<std::string> includes;
-    std::string output;
-    std::string source;
-
-    for (int ndx{}; ndx != argc; ++ndx)
-    {
-        if (argv[ndx][0] == '-')
-        {
-            if (argv[ndx][1] == 'i')
-                includes.push_back(argv[ndx] + 2); // push includes
-            else if (argv[ndx][1] == 'o')
-                output = argv[ndx] + 2; // set output
-        }
-        else
-            source = argv[ndx]; // set source
-    }
+    std::string source = argv[1];
 
     std::ifstream file(source, std::ios::binary | std::ios::ate);
     if (!file)
@@ -61,7 +55,7 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    // read file str into string 
+    // read the entire file content into string 
     auto file_size = file.tellg();
     file.seekg(std::ios::beg);
     std::string str(file_size, 0);
@@ -73,68 +67,146 @@ int main(int argc, char* argv[])
     str = std::regex_replace(str, line_comment_r, ""); // remove all line comments
 
     std::regex class_r("^(\\s*)class\\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\\s+extends\\s+([a-zA-Z_][a-zA-Z0-9_]*))?");
-    std::regex class_var_r("^(\\s*)var\\s+([a-zA-Z_][a-zA-Z0-9_]*\\s*:\\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\[\\d+\\])?");
-    std::regex class_method_r("^(\\s*)method\\s+((\\+|~)|([a-zA-Z_][a-zA-Z0-9_]*\\s*:\\s*))?([a-zA-Z_][a-zA-Z0-9_]*)");
-    std::smatch match;
+    std::regex class_var_r("^(\\s*)var\\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\\s*:\\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:\\[([a-zA-Z0-9@_]+)\\])?");
+    std::regex class_method_r("^(\\s*)method\\s+(?:(\\+|~)\\s*|(?:([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*))?([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()");
+    std::regex method_param_r("(?:(const)\\s+|(&)\\s*)?(?:(char)\\s+|([a-zA-Z_@][a-zA-Z0-9_@]*)\\s*:)?([a-zA-Z_@][a-zA-Z0-9_@]*)\\s*(?:\\[([a-zA-z0-9_@]*)\\])?\\s*(?:,|\\))");
+    std::regex char_r("(const\\s+)?(char\\s+)([a-zA-Z@_][a-zA-Z0-9@_]*\\s*\\[)");
+    std::regex open_r("\\s*\\{$");
+    std::string bstr; // build string
+    std::vector<std::string> method_list;
+    size_t last_pos = 0;
 
     // search for class declaration
-    while (std::regex_search(str.cbegin(), str.cend(), match, class_r))
+    for (auto it = std::sregex_iterator(str.begin(), str.end(), class_r); it != std::sregex_iterator(); ++it)
     {
-        std::string class_name = match[2].str();
+        auto m = *it;
+        std::string class_name = m[2].str();
         std::string var_class = "_c_" + class_name;
 
-        std::string replace;
-        if (match[3].matched) // is inherited
-            replace = std::format("{}new Class:{} = oo_class(\"{}\", \"{}\")", match[1].str(), var_class, class_name, match[3].str());
+        std::string new_str;
+        if (m[3].matched) // is inherited
+            new_str = std::format("{}new Class:{} = oo_class(\"{}\", \"{}\")", m[1].str(), var_class, class_name, m[3].str());
         else
-            replace = std::format("{}new Class:{} = oo_class(\"{}\")", match[1].str(), var_class, class_name);
+            new_str = std::format("{}new Class:{} = oo_class(\"{}\")", m[1].str(), var_class, class_name);
 
         // replace with new string
-        str.erase(match.position(), match.length());
-        str.insert(match.position(), replace);
-        
+        bstr += str.substr(last_pos, m.position()-last_pos) + new_str;
+        last_pos = m.position() + m.length();
+
         // get {} position and length
         size_t brace_start, brace_length;
-        if (GetNestedString(str.c_str(), '{', '}', match.position() + replace.length(), &brace_start, &brace_length))
+        if (GetNestedString(str.c_str(), '{', '}', m.position() + m.length() + 1, &brace_start, &brace_length))
         {
+
+            std::cout << "haha" << std::endl;
+            bstr += str.substr(last_pos, brace_start - last_pos);
+
+            size_t last_pos2 = 0;
             std::string class_str = str.substr(brace_start, brace_length);
+            std::string class_bstr;
 
             // search for variables
-            while (std::regex_search(class_str.cbegin(), class_str.cend(), match, class_var_r))
+            for (auto itv = std::sregex_iterator(class_str.begin(), class_str.end(), class_var_r); itv != std::sregex_iterator(); ++itv)
             {
-                std::string var_name = match[3].str();
-                int var_size = match[4].matched ? std::stoi(match[4].str().substr(1, match[4].str().size() - 2)) : 1;
-                if (var_size > 1) // array
-                    replace = std::format("{}oo_var({}, DT_ARRAY[{}], \"{}\")", match[1].str(), var_class, var_size, var_name);
+                auto mv = *itv;
+                std::string var_name = mv[2].str();
+                if (mv[3].matched) // array
+                    new_str = std::format("{}oo_var({}, DT_ARRAY[{}], \"{}\")", mv[1].str(), var_class, mv[3].str(), var_name);
                 else
-                    replace = std::format("{}oo_var({}, DT_CELL, \"{}\")", match[1].str(), var_class, var_name);
+                    new_str = std::format("{}oo_var({}, DT_CELL, \"{}\")", mv[1].str(), var_class, var_name);
 
-                class_str.erase(match.position(), match.length());
-                class_str.insert(match.position(), replace);
+                class_bstr += class_str.substr(last_pos2, mv.position() - last_pos2) + new_str; // build up the string
+                last_pos2 = mv.position() + mv.length();
             }
+
+            class_str = class_bstr + class_str.substr(last_pos2);
+            class_bstr.clear();
+            last_pos2 = 0;
 
             // search for methods
-            while (std::regex_search(class_str.cbegin(), class_str.cend(), match, class_method_r))
+            for (auto itm = std::sregex_iterator(class_str.begin(), class_str.end(), class_method_r); 
+                itm != std::sregex_iterator(); ++itm)
             {
-                int method_type = match[3].matched ? (match[3].str() == "+" ? 1 : match[3].str() == "-" ? 2 : 0) : 0;
-                std::string tag_name = match[4].str();
-                std::string method_name = match[5].str();
-
+                auto mm = *itm;
+                std::string method_type = !mm[2].matched ? "MT_METHOD" : mm[2].str() == "+" ? "MT_CTOR" : "MT_DTOR";
+                //std::string tag_name = mm[3].str();
+                std::string method_name = mm[4].str();
                 size_t param_start, param_length;
+
                 // get () position and length
-                if (GetNestedString(class_str.c_str(), '(', ')', match.position() + match.length(), &param_start, &param_length))
+                if (GetNestedString(class_str.c_str(), '(', ')', mm.position() + mm.length() - 1, &param_start, &param_length))
                 {
+                    std::string param_str = class_str.substr(param_start, param_length);
+                    new_str = std::format("{}oo_method({}, \"{}\"", mm[1].str(), method_type, method_name);
 
+                    // search for method parameters
+                    for (auto itp = std::sregex_iterator(param_str.begin(), param_str.end(), method_param_r); 
+                        itp != std::sregex_iterator(); ++itp)
+                    {
+                        auto mp = *itp;
+                        if (mp[6].matched) // is array or string
+                        {
+                            if (mp[3].str() == "char")
+                                new_str += ", FP_STRING";
+                            else
+                                new_str += ", FP_ARRAY";
+                        }
+                        else
+                        {
+                            if (!mp[2].matched) // by value
+                            {
+                                if (mp[4].str() == "Float")
+                                    new_str += ", FP_FLOAT";
+                                else
+                                    new_str += ", FP_CELL";
+                            }
+                            else // by ref
+                            {
+                                new_str += ", FP_VAL_BYREF";
+                            }
+                        }
+                    }
+
+                    new_str += ")";
+                    size_t mstart, mlen;
+
+                    // check if this method has declaration
+                    if (GetNestedString(class_str.c_str(), '{', '}', param_start + param_length + 1, &mstart, &mlen))
+                    {
+                        std::string method_str = std::format("\n{}public {}{}@{}", mm[1].str(), mm[3].matched ? mm[3].str() + ":" : "", class_name, method_name);
+                        param_str = std::regex_replace(param_str, char_r, "$1$3");
+                        method_str += param_str + mm[1].str();
+                        method_str += class_str.substr(mstart, mlen);
+
+                        std::string s = mm[1].str().substr(2);
+                        method_str = std::regex_replace(method_str, std::regex("^" + s), "");
+                        std::cout << "[" << s << "]" << std::endl;
+                        method_list.push_back(method_str); // add to the method list for later use
+                    }
+                    else
+                    {
+                        mstart = param_start;
+                        mlen = param_length;
+                    }
+
+                    class_bstr += class_str.substr(last_pos2, mm.position() - last_pos2) + new_str; // build up the string
+                    last_pos2 = mstart + mlen;
                 }
-
-                class_str.erase(match.position(), match.length());
             }
 
-            str.erase(brace_start, brace_length);
-            str.insert(brace_start, class_str);
+            class_bstr += class_str.substr(last_pos2);
+            bstr += class_bstr;
+            last_pos = brace_start + brace_length;
         }
+    }
+    bstr += str.substr(last_pos);
+
+    // append extra code from the method list
+    for (const auto& s : method_list)
+    {
+        bstr += s;
     }
 
     std::ofstream ofile(source + ".oo", std::ios::binary | std::ios::trunc);
-    ofile << str;
+    ofile << bstr;
 }
