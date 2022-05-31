@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
                 if (GetNestedString(class_str.c_str(), '(', ')', mm.position() + mm.length() - 1, &param_start, &param_length))
                 {
                     std::string param_str = class_str.substr(param_start, param_length);
-                    new_str = std::format("{}oo_method({}, \"{}\"", mm[1].str(), method_type, method_name);
+                    new_str = std::format("{}oo_method({}, {}, \"{}\"", mm[1].str(), var_class, method_type, method_name);
 
                     // search for method parameters
                     for (auto itp = std::sregex_iterator(param_str.begin(), param_str.end(), method_param_r); 
@@ -207,6 +207,6 @@ int main(int argc, char* argv[])
         bstr += s;
     }
 
-    std::ofstream ofile(source + ".oo", std::ios::binary | std::ios::trunc);
+    std::ofstream ofile(source + ".sma", std::ios::binary | std::ios::trunc);
     ofile << bstr;
 }
