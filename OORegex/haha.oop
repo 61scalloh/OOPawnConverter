@@ -8,7 +8,7 @@ public oo_init()
 		var Float:m_float;
 		var m_array[32];
 
-		method +Ctor(Object:i, const Float:f, const char s[], array[32], &Float:ha, &cell)
+		method +Ctor(Object:i, const Float:f, const char s[], arr[32] &cell)
 		{
 			new fuck = 999;
 		}
@@ -22,7 +22,7 @@ public oo_init()
 		var Array:m_dynarray;
 		var m_name[32];
 
-		method +Ctor(char test[], char ha[32], const char s[], Float:array[], array[32])
+		method +Ctor(char str[], char str2[32] Float:farr[], array[32])
 		method ~Dtor()
 		{
 			new a = 0;
