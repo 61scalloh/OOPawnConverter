@@ -12,10 +12,8 @@ public oo_init()
 		{
 			new fuck = 999;
 		}
-
 		method ~Dtor()
-		method Object:Assign()
-		var joejoe;
+		method Object:Assign(Float:f, Object:i);
 	}
 
 	class Human extends PlayerClass
@@ -25,18 +23,19 @@ public oo_init()
 		var m_name[32];
 
 		method +Ctor(char test[], char ha[32], const char s[], Float:array[], array[32])
-
 		method ~Dtor()
 		{
 			new a = 0;
 			if (1) {a=1} else {1=2}
 		}
-
-		var diu[32];
-
 		method JoeBao()
 		{
 			new ha = 1 + 2 + 3;
 		}
 	}
+}
+
+method Object:PlayerClass@Assign(Float:f, Object:i)
+{
+
 }

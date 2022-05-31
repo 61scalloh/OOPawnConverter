@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 
     std::regex class_r("^(\\s*)class\\s+([a-zA-Z_][a-zA-Z0-9_]*)(?:\\s+extends\\s+([a-zA-Z_][a-zA-Z0-9_]*))?");
     std::regex class_var_r("^(\\s*)var\\s+(?:[a-zA-Z_][a-zA-Z0-9_]*\\s*:\\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:\\[([a-zA-Z0-9@_]+)\\])?");
-    std::regex class_method_r("^(\\s*)method\\s+(?:(\\+|~)\\s*|(?:([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*))?([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()");
+    std::regex method_r("^(\\s*)method\\s+((?:(\\+|~)\\s*|(?:([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*))?([a-zA-Z@_][a-zA-Z0-9@_]*)\\s*(\\())");
     std::regex method_param_r("(?:(const)\\s+|(&)\\s*)?(?:(char)\\s+|([a-zA-Z_@][a-zA-Z0-9_@]*)\\s*:)?([a-zA-Z_@][a-zA-Z0-9_@]*)\\s*(?:\\[([a-zA-z0-9_@]*)\\])?\\s*(?:,|\\))");
     std::regex char_r("(const\\s+)?(char\\s+)([a-zA-Z@_][a-zA-Z0-9@_]*\\s*\\[)");
     std::regex open_r("\\s*\\{$");
@@ -124,13 +124,13 @@ int main(int argc, char* argv[])
             last_pos2 = 0;
 
             // search for methods
-            for (auto itm = std::sregex_iterator(class_str.begin(), class_str.end(), class_method_r); 
+            for (auto itm = std::sregex_iterator(class_str.begin(), class_str.end(), method_r); 
                 itm != std::sregex_iterator(); ++itm)
             {
                 auto mm = *itm;
-                std::string method_type = !mm[2].matched ? "MT_METHOD" : mm[2].str() == "+" ? "MT_CTOR" : "MT_DTOR";
+                std::string method_type = !mm[3].matched ? "MT_METHOD" : mm[3].str() == "+" ? "MT_CTOR" : "MT_DTOR";
                 //std::string tag_name = mm[3].str();
-                std::string method_name = mm[4].str();
+                std::string method_name = mm[5].str();
                 size_t param_start, param_length;
 
                 // get () position and length
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
                     // check if this method has declaration
                     if (GetNestedString(class_str.c_str(), '{', '}', param_start + param_length + 1, &mstart, &mlen))
                     {
-                        std::string method_str = std::format("\n{}public {}{}@{}", mm[1].str(), mm[3].matched ? mm[3].str() + ":" : "", class_name, method_name);
+                        std::string method_str = std::format("\n{}public {}{}@{}", mm[1].str(), mm[4].matched ? mm[4].str() + ":" : "", class_name, method_name);
                         param_str = std::regex_replace(param_str, char_r, "$1$3");
                         method_str += param_str + mm[1].str();
                         method_str += class_str.substr(mstart, mlen);
@@ -200,6 +200,8 @@ int main(int argc, char* argv[])
         }
     }
     bstr += str.substr(last_pos);
+
+    bstr = std::regex_replace(bstr, method_r, "$1public $2");
 
     // append extra code from the method list
     for (const auto& s : method_list)
