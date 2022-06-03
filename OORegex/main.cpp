@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
 
     bstr = std::regex_replace(bstr, method_r, "$1public $2");
 
-    // append extra code from the method list
+    // append method declarations
     for (const auto& s : method_list)
     {
         bstr += s;
